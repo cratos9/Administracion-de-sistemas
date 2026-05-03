@@ -10,7 +10,7 @@ CHOSEN_PORT_RESULT=""
 
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo "Ejecuta como sudo"
+        echo "Ejecuta este script como root o con sudo."
         exit 1
     fi
 }
@@ -29,21 +29,21 @@ ask_port() {
         PORT=${PORT:-$DEFAULT_PORT}
 
         if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
-            echo "Puerto invalido, ingresa un numero entre 1 y 65535"
+            echo "Puerto invalido. Ingresa un numero entre 1 y 65535."
             continue
         fi
 
         if port_in_use "$PORT"; then
-            echo "El puerto ${PORT} ya esta en uso"
+            echo "El puerto ${PORT} ya esta en uso."
             read -rp "Deseas elegir otro puerto? (s/n): " RETRY
             if [[ "$RETRY" =~ ^[Ss]$ ]]; then
                 continue
             else
-                echo "Puerto ${PORT} conservado"
+                echo "Puerto ${PORT} conservado."
                 break
             fi
         else
-            echo "Puerto ${PORT} disponible"
+            echo "Puerto ${PORT} disponible."
             break
         fi
     done
@@ -53,7 +53,7 @@ ask_port() {
 
 install_apache() {
     if systemctl is-active --quiet apache2; then
-        echo "Apache ya estaba instalado y corriendo"
+        echo "Apache ya esta instalado y corriendo."
         read -rp "Deseas reinstalarlo? (s/n): " REINSTALL
         if [[ ! "$REINSTALL" =~ ^[Ss]$ ]]; then
             return
@@ -77,15 +77,15 @@ install_apache() {
     sleep 2
 
     if systemctl is-active --quiet apache2; then
-        echo "Apache instalado y corriendo en puerto ${APACHE_PORT}"
+        echo "Apache instalado y corriendo en puerto ${APACHE_PORT}."
     else
-        echo "Apache no pudo iniciar"
+        echo "Apache no pudo iniciar. Revisa: journalctl -xeu apache2.service"
     fi
 }
 
 install_tomcat() {
     if systemctl is-active --quiet tomcat; then
-        echo "Tomcat ya estaba instalado y corriendo"
+        echo "Tomcat ya esta instalado y corriendo."
         read -rp "Deseas reinstalarlo? (s/n): " REINSTALL
         if [[ ! "$REINSTALL" =~ ^[Ss]$ ]]; then
             return
@@ -103,7 +103,7 @@ install_tomcat() {
     echo "JAVA_HOME detectado: ${JAVA_HOME_PATH}"
 
     if [ -d "${TOMCAT_DIR}" ]; then
-        echo "Limpiando instalacion de Tomcat"
+        echo "Limpiando instalacion previa de Tomcat..."
         rm -rf "${TOMCAT_DIR}"
     fi
 
@@ -115,32 +115,21 @@ install_tomcat() {
 
     useradd -m -U -d ${TOMCAT_DIR} -s /bin/false tomcat 2>/dev/null || true
 
-    echo "Descargando Tomcat"
+    echo "Descargando Tomcat ${TOMCAT_VERSION}..."
     wget -q "https://archive.apache.org/dist/tomcat/tomcat-10/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz" -O /tmp/tomcat.tar.gz
 
     if [ ! -f /tmp/tomcat.tar.gz ] || [ ! -s /tmp/tomcat.tar.gz ]; then
-        echo "Error: la descarga de Tomcat fallo"
+        echo "Error: la descarga de Tomcat fallo."
         return 1
     fi
 
     tar -xzf /tmp/tomcat.tar.gz -C /opt/
-    EXTRACTED_DIR=$(ls /opt/ | grep "apache-tomcat" | head -1)
-
-    if [ -z "$EXTRACTED_DIR" ]; then
-        echo "Error: La extraccion fallo"
-        return 1
-    fi
-
-    echo "Carpeta extraida: ${EXTRACTED_DIR}"
-    mv /opt/${EXTRACTED_DIR} ${TOMCAT_DIR}
+    mv /opt/apache-tomcat-${TOMCAT_VERSION} ${TOMCAT_DIR}
 
     if [ ! -f "${TOMCAT_DIR}/bin/startup.sh" ]; then
-        echo "Error: startup.sh no se ha encontrado"
-	ls -la ${TOMCAT_DIR}/bin 2>/dev/null || echo "El directorio bin no existe"
-	return 1
+        echo "Error: startup.sh no encontrado. La extraccion fallo."
+        return 1
     fi
-
-    echo "startup.sh encontrado correctamente"
 
     chown -R tomcat:tomcat ${TOMCAT_DIR}
     chmod +x ${TOMCAT_DIR}/bin/*.sh
@@ -174,15 +163,15 @@ EOF
     sleep 6
 
     if systemctl is-active --quiet tomcat; then
-        echo "Tomcat instalado y corriendo en puerto ${TOMCAT_PORT}"
+        echo "Tomcat instalado y corriendo en puerto ${TOMCAT_PORT}."
     else
-        echo "Tomcat no pudo iniciar"
+        echo "Tomcat no pudo iniciar. Revisa: journalctl -xeu tomcat.service"
     fi
 }
 
 install_nginx() {
     if systemctl is-active --quiet nginx; then
-        echo "Nginx ya estaba instalado y corriendo"
+        echo "Nginx ya esta instalado y corriendo."
         read -rp "Deseas reinstalarlo? (s/n): " REINSTALL
         if [[ ! "$REINSTALL" =~ ^[Ss]$ ]]; then
             return
@@ -216,7 +205,7 @@ EOF
     if systemctl is-active --quiet nginx; then
         echo "Nginx instalado y corriendo en puerto ${NGINX_PORT}."
     else
-        echo "Nginx no pudo iniciar"
+        echo "Nginx no pudo iniciar. Revisa: journalctl -xeu nginx.service"
     fi
 }
 
@@ -242,7 +231,7 @@ menu_instalar() {
             install_nginx
             ;;
         5) return ;;
-        *) echo "Opcion invalida" ;;
+        *) echo "Opcion invalida." ;;
     esac
 }
 
@@ -268,16 +257,16 @@ menu_detener() {
     get_service_name
 
     if [ "$SELECTED_SERVICE" = "invalid" ]; then
-        echo "Opcion invalida"
+        echo "Opcion invalida."
         return
     fi
 
     if [ "$SELECTED_SERVICE" = "all" ]; then
         for S in apache2 tomcat nginx; do
-            systemctl stop "$S" 2>/dev/null && echo "$S detenido" || echo "$S no estaba activo o no esta instalado"
+            systemctl stop "$S" 2>/dev/null && echo "$S detenido." || echo "$S no estaba activo o no esta instalado."
         done
     else
-        systemctl stop "$SELECTED_SERVICE" 2>/dev/null && echo "$SELECTED_SERVICE detenido" || echo "$SELECTED_SERVICE no estaba activo o no esta instalado"
+        systemctl stop "$SELECTED_SERVICE" 2>/dev/null && echo "$SELECTED_SERVICE detenido." || echo "$SELECTED_SERVICE no estaba activo o no esta instalado."
     fi
 }
 
@@ -285,33 +274,33 @@ menu_reiniciar() {
     get_service_name
 
     if [ "$SELECTED_SERVICE" = "invalid" ]; then
-        echo "Opcion invalida"
+        echo "Opcion invalida."
         return
     fi
 
     if [ "$SELECTED_SERVICE" = "all" ]; then
         for S in apache2 tomcat nginx; do
-            systemctl restart "$S" 2>/dev/null && echo "$S reiniciado" || echo "$S no pudo reiniciarse o no esta instalado"
+            systemctl restart "$S" 2>/dev/null && echo "$S reiniciado." || echo "$S no pudo reiniciarse o no esta instalado."
         done
     else
-        systemctl restart "$SELECTED_SERVICE" 2>/dev/null && echo "$SELECTED_SERVICE reiniciado" || echo "$SELECTED_SERVICE no pudo reiniciarse o no esta instalado"
+        systemctl restart "$SELECTED_SERVICE" 2>/dev/null && echo "$SELECTED_SERVICE reiniciado." || echo "$SELECTED_SERVICE no pudo reiniciarse o no esta instalado."
     fi
 }
 
 menu_estado() {
     echo ""
-    echo "Estado de servicios:"
+    echo "--- Estado de servicios ---"
     for SERVICE in apache2 tomcat nginx; do
         STATUS=$(systemctl is-active "$SERVICE" 2>/dev/null)
         echo "${SERVICE}: ${STATUS}"
     done
 
     echo ""
-    echo "Puertos en uso:"
+    echo "--- Puertos en uso ---"
     ss -tlnp | grep -E "${APACHE_PORT}|${TOMCAT_PORT}|${NGINX_PORT}" | sort -u
 
     echo ""
-    echo "Prueba HTTP:"
+    echo "--- Prueba HTTP ---"
     for ENTRY in "Apache:${APACHE_PORT}" "Tomcat:${TOMCAT_PORT}" "Nginx:${NGINX_PORT}"; do
         NAME="${ENTRY%%:*}"
         PORT="${ENTRY##*:}"
@@ -325,7 +314,7 @@ main_menu() {
 
     while true; do
         echo ""
-        echo "Servicios HTTP"
+        echo "Gestor de Servicios HTTP"
         echo "1) Instalar servicios"
         echo "2) Detener servicios"
         echo "3) Reiniciar servicios"
@@ -338,8 +327,8 @@ main_menu() {
             2) menu_detener ;;
             3) menu_reiniciar ;;
             4) menu_estado ;;
-            5) echo "Saliendo"; exit 0 ;;
-            *) echo "Opcion invalida" ;;
+            5) echo "Saliendo."; exit 0 ;;
+            *) echo "Opcion invalida." ;;
         esac
     done
 }
